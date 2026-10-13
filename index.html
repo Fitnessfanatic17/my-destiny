@@ -15,8 +15,7 @@
             --bg-color: #05050A;
             --glass-bg: rgba(25, 25, 35, 0.1);
             --glass-border: rgba(255, 255, 255, 0.15);
-            --color-work: #FFFFFF; 
-            --color-break: #00FFFF;
+            --color-glow: #FFFFFF; 
             --text-main: #FFFFFF;
         }
 
@@ -145,6 +144,8 @@
             font-weight: 900;
             letter-spacing: 12px;
             margin-bottom: 20px;
+            color: var(--color-glow);
+            text-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
             transition: color 0.5s, text-shadow 0.5s;
         }
 
@@ -170,7 +171,9 @@
             height: 100%;
             width: 0%;
             border-radius: 10px;
-            transition: width 1s linear, background-color 0.5s, box-shadow 0.5s;
+            background-color: var(--color-glow);
+            box-shadow: 0 0 15px var(--color-glow);
+            transition: width 1s linear;
         }
 
     </style>
@@ -180,8 +183,8 @@
     <!-- 3D Parallax Starfield -->
     <canvas id="space-canvas"></canvas>
 
-    <!-- Notification Sound -->
-    <audio id="notify-sound" src="notification_sound.mp3" preload="auto"></audio>
+    <!-- Notification Sound exactly matching the provided file name -->
+    <audio id="notify-sound" src="Temple bell.mp3" preload="auto"></audio>
 
     <!-- Timer Interface -->
     <div id="timer-screen" class="glass-panel">
@@ -269,8 +272,6 @@
             // Update Text UI
             const phaseEl = document.getElementById('phase-text');
             phaseEl.innerText = isWorkPhase ? "WORK" : "BREAK";
-            phaseEl.style.color = isWorkPhase ? "var(--color-work)" : "var(--color-break)";
-            phaseEl.style.textShadow = isWorkPhase ? "0 0 20px rgba(255,255,255,0.5)" : "0 0 20px rgba(0,255,255,0.5)";
 
             document.getElementById('time-text').innerText = 
                 String(remMin).padStart(2, '0') + ":" + String(remSec).padStart(2, '0');
@@ -283,8 +284,6 @@
 
             const fillEl = document.getElementById('progress-fill');
             fillEl.style.width = progressPct + "%";
-            fillEl.style.backgroundColor = isWorkPhase ? "var(--color-work)" : "var(--color-break)";
-            fillEl.style.boxShadow = isWorkPhase ? "0 0 15px var(--color-work)" : "0 0 15px var(--color-break)";
         }
 
         function triggerNotification(isWorkPhase) {
