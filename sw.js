@@ -1,11 +1,11 @@
-const CACHE_NAME = 'pomoflow-cache-v1';
+const CACHE_NAME = 'pomoflow-cache-v2';
 const urlsToCache = [
   './',
   './index.html',
   './manifest.json',
   './icon-192.png',
   './icon-512.png',
-  './notification_sound.mp3'
+  './Temple%20bell.mp3'
 ];
 
 self.addEventListener('install', event => {
