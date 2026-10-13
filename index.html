@@ -12,7 +12,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@200;500;800;900&display=swap" rel="stylesheet">
     <style>
         :root {
-            /* Changed to pitch black */
             --bg-color: #000000;
             --glass-bg: rgba(25, 25, 35, 0.1);
             --glass-border: rgba(255, 255, 255, 0.15);
@@ -72,7 +71,7 @@
             left: 0;
             width: 100vw;
             height: 100vh;
-            background: rgba(0, 0, 0, 0.85); /* Changed to pure black overlay */
+            background: rgba(0, 0, 0, 0.85);
             backdrop-filter: blur(15px);
             -webkit-backdrop-filter: blur(15px);
             z-index: 100;
@@ -373,8 +372,8 @@
         }
 
         function animateSpace() {
-            // Completely clear the canvas with pure black every frame to remove trail lines
-            ctx.fillStyle = '#000000'; 
+            // Pure black with opacity for clean star trails without grey/white background haze
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.3)'; 
             ctx.fillRect(0, 0, width, height);
 
             stars.forEach(star => {
