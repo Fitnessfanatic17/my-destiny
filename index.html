@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>POMOFLOW // ZERO FRICTION</title>
+    
+    <!-- PWA Requirements -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#05050A">
+    
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@200;500;800;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #05050A;
+            --glass-bg: rgba(25, 25, 35, 0.1);
+            --glass-border: rgba(255, 255, 255, 0.15);
+            --color-work: #FFFFFF; 
+            --color-break: #00FFFF;
+            --text-main: #FFFFFF;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: 'Montserrat', sans-serif;
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            user-select: none;
+        }
+
+        /* Deep Space Canvas */
+        #space-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 0;
+        }
+
+        /* Glassmorphism Containers */
+        .glass-panel {
+            position: relative;
+            z-index: 10;
+            background: var(--glass-bg);
+            backdrop-filter: blur(25px);
+            -webkit-backdrop-filter: blur(25px);
+            border: 1px solid var(--glass-border);
+            border-radius: 30px;
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.6), 
+                        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* --- LAUNCH OVERLAY --- */
+        #launch-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(5, 5, 10, 0.85);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            z-index: 100;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: opacity 0.8s ease, visibility 0.8s;
+        }
+
+        .launch-modal {
+            width: 90%;
+            max-width: 550px;
+            padding: 50px 40px;
+            text-align: center;
+        }
+
+        .launch-title {
+            font-size: 28px;
+            font-weight: 800;
+            letter-spacing: 4px;
+            margin-bottom: 24px;
+        }
+
+        .launch-subtitle {
+            font-size: 14px;
+            font-weight: 500;
+            color: rgba(255, 255, 255, 0.7);
+            letter-spacing: 2px;
+            line-height: 1.8;
+            margin-bottom: 48px;
+        }
+
+        .got-it-btn {
+            background: #FFFFFF;
+            color: #000000;
+            border: none;
+            padding: 16px 48px;
+            border-radius: 30px;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 16px;
+            font-weight: 700;
+            letter-spacing: 2px;
+            cursor: pointer;
+            box-shadow: 0 4px 20px rgba(255, 255, 255, 0.2);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .got-it-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 25px rgba(255, 255, 255, 0.3);
+        }
+
+        /* --- TIMER INTERFACE --- */
+        #timer-screen {
+            width: 90%;
+            max-width: 550px;
+            padding: 60px 30px;
+            opacity: 0;
+            transform: scale(0.95);
+            transition: opacity 1s ease, transform 1s ease;
+        }
+
+        #timer-screen.active {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        #phase-text {
+            font-size: clamp(36px, 12vw, 80px);
+            font-weight: 900;
+            letter-spacing: 12px;
+            margin-bottom: 20px;
+            transition: color 0.5s, text-shadow 0.5s;
+        }
+
+        #time-text {
+            font-size: clamp(70px, 20vw, 150px);
+            font-weight: 200;
+            letter-spacing: -2px;
+            line-height: 1;
+            margin-bottom: 40px;
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* Progress Bar */
+        .progress-track {
+            width: 70%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            width: 0%;
+            border-radius: 10px;
+            transition: width 1s linear, background-color 0.5s, box-shadow 0.5s;
+        }
+
+    </style>
+</head>
+<body>
+
+    <!-- 3D Parallax Starfield -->
+    <canvas id="space-canvas"></canvas>
+
+    <!-- Notification Sound -->
+    <audio id="notify-sound" src="notification_sound.mp3" preload="auto"></audio>
+
+    <!-- Timer Interface -->
+    <div id="timer-screen" class="glass-panel">
+        <div id="phase-text">WORK</div>
+        <div id="time-text">25:00</div>
+        <div class="progress-track">
+            <div class="progress-fill" id="progress-fill"></div>
+        </div>
+    </div>
+
+    <!-- Launch Modal -->
+    <div id="launch-overlay">
+        <div class="glass-panel launch-modal">
+            <div class="launch-title">FIND THE FLOW.</div>
+            <div class="launch-subtitle">FOCUS FOR 25 MINUTES.<br>RECHARGE FOR 5 MINUTES.</div>
+            <button class="got-it-btn" id="got-it-btn">GOT IT</button>
+        </div>
+    </div>
+
+    <script>
+        // ==========================================
+        // SYSTEM: LAUNCH LOGIC & PERMISSIONS
+        // ==========================================
+        const launchOverlay = document.getElementById('launch-overlay');
+        const timerScreen = document.getElementById('timer-screen');
+        const gotItBtn = document.getElementById('got-it-btn');
+        const audio = document.getElementById('notify-sound');
+
+        gotItBtn.addEventListener('click', () => {
+            // 1. Hide Overlay
+            launchOverlay.style.opacity = '0';
+            launchOverlay.style.visibility = 'hidden';
+            
+            // 2. Show Timer
+            timerScreen.classList.add('active');
+
+            // 3. Unlock Audio Engine (Required by browsers)
+            audio.play().then(() => {
+                audio.pause();
+                audio.currentTime = 0;
+            }).catch(e => console.log("Audio unlock failed silently."));
+
+            // 4. Request Notification Permission
+            if ("Notification" in window && Notification.permission !== "granted" && Notification.permission !== "denied") {
+                Notification.requestPermission();
+            }
+
+            // Start Timer Loop
+            updateTimer();
+            setInterval(updateTimer, 1000);
+        });
+
+        // ==========================================
+        // SYSTEM: TIME SYNC ENGINE
+        // ==========================================
+        let currentPhaseIsWork = null;
+
+        function updateTimer() {
+            const now = new Date();
+            const m = now.getMinutes();
+            const s = now.getSeconds();
+
+            // 0-24 & 30-54 = WORK | 25-29 & 55-59 = BREAK
+            const isWorkPhase = (m < 25) || (m >= 30 && m < 55);
+            
+            // Trigger Notifications on Phase Change
+            if (currentPhaseIsWork !== null && currentPhaseIsWork !== isWorkPhase) {
+                triggerNotification(isWorkPhase);
+            }
+            currentPhaseIsWork = isWorkPhase;
+
+            let targetMinute;
+            if (m < 25) targetMinute = 25;
+            else if (m < 30) targetMinute = 30;
+            else if (m < 55) targetMinute = 55;
+            else targetMinute = 60;
+
+            let remMin = targetMinute - 1 - m;
+            let remSec = 60 - s;
+            if (remSec === 60) {
+                remMin += 1;
+                remSec = 0;
+            }
+
+            // Update Text UI
+            const phaseEl = document.getElementById('phase-text');
+            phaseEl.innerText = isWorkPhase ? "WORK" : "BREAK";
+            phaseEl.style.color = isWorkPhase ? "var(--color-work)" : "var(--color-break)";
+            phaseEl.style.textShadow = isWorkPhase ? "0 0 20px rgba(255,255,255,0.5)" : "0 0 20px rgba(0,255,255,0.5)";
+
+            document.getElementById('time-text').innerText = 
+                String(remMin).padStart(2, '0') + ":" + String(remSec).padStart(2, '0');
+
+            // Calculate Progress Bar
+            const totalPhaseSeconds = isWorkPhase ? (25 * 60) : (5 * 60);
+            const remainingTotalSeconds = (remMin * 60) + remSec;
+            const elapsedSeconds = totalPhaseSeconds - remainingTotalSeconds;
+            const progressPct = (elapsedSeconds / totalPhaseSeconds) * 100;
+
+            const fillEl = document.getElementById('progress-fill');
+            fillEl.style.width = progressPct + "%";
+            fillEl.style.backgroundColor = isWorkPhase ? "var(--color-work)" : "var(--color-break)";
+            fillEl.style.boxShadow = isWorkPhase ? "0 0 15px var(--color-work)" : "0 0 15px var(--color-break)";
+        }
+
+        function triggerNotification(isWorkPhase) {
+            // Play Audio
+            audio.currentTime = 0;
+            audio.play().catch(e => console.log("Audio play blocked by browser.", e));
+
+            // Show Notification Popup
+            if ("Notification" in window && Notification.permission === "granted") {
+                const title = "POMOFLOW";
+                const body = isWorkPhase ? "Break done! Focus time." : "Work done! Time to recharge.";
+                
+                // Using Service Worker to show notification if available (better PWA support)
+                navigator.serviceWorker.ready.then(registration => {
+                    registration.showNotification(title, {
+                        body: body,
+                        icon: './icon-192.png',
+                        vibrate: [200, 100, 200]
+                    });
+                }).catch(() => {
+                    // Fallback to standard web notification
+                    new Notification(title, { body: body, icon: './icon-192.png' });
+                });
+            }
+        }
+
+        // ==========================================
+        // SYSTEM: 3D STARFIELD ENGINE
+        // ==========================================
+        const canvas = document.getElementById('space-canvas');
+        const ctx = canvas.getContext('2d');
+        
+        let width, height;
+        let stars = [];
+        const numStars = 400; 
+        let mouseX = 0;
+        let mouseY = 0;
+
+        function resizeCanvas() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        // Parallax Listener
+        document.addEventListener('mousemove', (e) => {
+            mouseX = (e.clientX - width / 2) * 0.05;
+            mouseY = (e.clientY - height / 2) * 0.05;
+        });
+
+        class Star {
+            constructor() {
+                this.x = Math.random() * width;
+                this.y = Math.random() * height;
+                this.z = Math.random() * width; 
+                this.size = Math.random() * 1.5;
+                this.color = `rgba(255, 255, 255, ${Math.random() * 0.5 + 0.5})`;
+            }
+
+            update() {
+                this.z -= 1.5; // Speed of space movement
+                if (this.z <= 0) {
+                    this.z = width;
+                    this.x = Math.random() * width;
+                    this.y = Math.random() * height;
+                }
+            }
+
+            draw() {
+                let x, y, radius;
+                x = (this.x - width / 2) * (width / this.z) + width / 2 + mouseX * (width / this.z);
+                y = (this.y - height / 2) * (width / this.z) + height / 2 + mouseY * (width / this.z);
+                radius = this.size * (width / this.z);
+
+                ctx.beginPath();
+                ctx.arc(x, y, radius, 0, Math.PI * 2);
+                ctx.fillStyle = this.color;
+                ctx.fill();
+            }
+        }
+
+        for (let i = 0; i < numStars; i++) {
+            stars.push(new Star());
+        }
+
+        function animateSpace() {
+            ctx.fillStyle = 'rgba(5, 5, 10, 0.3)'; // Trail effect
+            ctx.fillRect(0, 0, width, height);
+
+            stars.forEach(star => {
+                star.update();
+                star.draw();
+            });
+
+            requestAnimationFrame(animateSpace);
+        }
+
+        animateSpace();
+    </script>
+
+    <!-- PWA Service Worker Registration -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js');
+            });
+        }
+    </script>
+</body>
+</html>
