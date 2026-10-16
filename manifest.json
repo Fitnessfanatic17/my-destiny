@@ -1,9 +1,10 @@
 {
-  "name": "POMOFLOW",
-  "short_name": "POMOFLOW",
+  "name": "FLOW",
+  "short_name": "FLOW",
   "description": "Zero Friction Pomodoro Timer",
   "start_url": "./index.html",
   "display": "standalone",
+  "orientation": "any",
   "background_color": "#05050A",
   "theme_color": "#05050A",
   "icons": [
