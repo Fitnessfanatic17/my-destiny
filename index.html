@@ -2,12 +2,13 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>ZERO FRICTION</title>
     
-    <!-- PWA Requirements -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#000000">
+    <meta name="application-name" content="FLOW">
+    <meta name="apple-mobile-web-app-title" content="FLOW">
     
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@200;500;800;900&display=swap" rel="stylesheet">
     <style>
@@ -15,21 +16,18 @@
             --bg-color: #000000;
             --glass-bg: rgba(25, 25, 35, 0.1);
             --glass-border: rgba(255, 255, 255, 0.15);
-            --color-glow: #FFFFFF; 
+            --color-glow: #FFFFFF;
             --text-main: #FFFFFF;
         }
 
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
             background-color: var(--bg-color);
             color: var(--text-main);
             font-family: 'Montserrat', sans-serif;
             height: 100vh;
+            height: 100dvh;
             overflow: hidden;
             display: flex;
             justify-content: center;
@@ -37,17 +35,16 @@
             user-select: none;
         }
 
-        /* Deep Space Canvas */
         #space-canvas {
             position: absolute;
             top: 0;
             left: 0;
             width: 100vw;
             height: 100vh;
+            height: 100dvh;
             z-index: 0;
         }
 
-        /* Glassmorphism Containers */
         .glass-panel {
             position: relative;
             z-index: 10;
@@ -56,21 +53,20 @@
             -webkit-backdrop-filter: blur(25px);
             border: 1px solid var(--glass-border);
             border-radius: 30px;
-            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.6), 
-                        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.1);
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
         }
 
-        /* --- LAUNCH OVERLAY --- */
         #launch-overlay {
             position: fixed;
             top: 0;
             left: 0;
             width: 100vw;
             height: 100vh;
+            height: 100dvh;
             background: rgba(0, 0, 0, 0.85);
             backdrop-filter: blur(15px);
             -webkit-backdrop-filter: blur(15px);
@@ -124,7 +120,6 @@
             box-shadow: 0 6px 25px rgba(255, 255, 255, 0.3);
         }
 
-        /* --- TIMER INTERFACE --- */
         #timer-screen {
             width: 90%;
             max-width: 550px;
@@ -158,7 +153,6 @@
             font-variant-numeric: tabular-nums;
         }
 
-        /* Progress Bar */
         .progress-track {
             width: 70%;
             height: 6px;
@@ -173,20 +167,59 @@
             border-radius: 10px;
             background-color: var(--color-glow);
             box-shadow: 0 0 15px var(--color-glow);
-            transition: width 1s linear;
+            transition: width 0.3s linear;
         }
 
+        /* --- ANDROID & MOBILE LANDSCAPE OPTIMIZATION --- */
+        @media (orientation: landscape) and (max-height: 550px) {
+            .launch-modal {
+                width: 85%;
+                max-width: 480px;
+                padding: 24px 30px;
+                border-radius: 24px;
+            }
+
+            .launch-title {
+                font-size: clamp(18px, 6vh, 24px);
+                margin-bottom: 10px;
+            }
+
+            .launch-subtitle {
+                font-size: clamp(11px, 3.8vh, 13px);
+                line-height: 1.6;
+                margin-bottom: 20px;
+            }
+
+            .got-it-btn {
+                padding: 12px 38px;
+                font-size: 14px;
+            }
+
+            #timer-screen {
+                width: 85%;
+                max-width: 480px;
+                padding: 24px 30px;
+                border-radius: 24px;
+            }
+
+            #phase-text {
+                font-size: clamp(26px, 11vh, 52px);
+                letter-spacing: 10px;
+                margin-bottom: 8px;
+            }
+
+            #time-text {
+                font-size: clamp(54px, 26vh, 105px);
+                margin-bottom: 18px;
+            }
+        }
     </style>
 </head>
 <body>
 
-    <!-- 3D Parallax Starfield -->
     <canvas id="space-canvas"></canvas>
-
-    <!-- Notification Sound exactly matching the provided file name -->
     <audio id="notify-sound" src="Temple bell.mp3" preload="auto"></audio>
 
-    <!-- Timer Interface -->
     <div id="timer-screen" class="glass-panel">
         <div id="phase-text">WORK</div>
         <div id="time-text">25:00</div>
@@ -195,7 +228,6 @@
         </div>
     </div>
 
-    <!-- Launch Modal -->
     <div id="launch-overlay">
         <div class="glass-panel launch-modal">
             <div class="launch-title">FIND THE FLOW.</div>
@@ -206,39 +238,124 @@
 
     <script>
         // ==========================================
-        // SYSTEM: LAUNCH LOGIC & PERMISSIONS
+        // ZERO-LATENCY AUDIO & KEEP-ALIVE ENGINE
+        // ==========================================
+        const fallbackAudio = document.getElementById('notify-sound');
+        let audioCtx = null;
+        let bellBuffer = null;
+
+        async function initAudioEngine() {
+            try {
+                const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+                if (!audioCtx) {
+                    audioCtx = new AudioContextClass({ latencyHint: 'interactive' });
+                }
+                if (audioCtx.state === 'suspended') {
+                    await audioCtx.resume();
+                }
+
+                // Pre-decode MP3 into RAM for instant 0ms playback
+                if (!bellBuffer) {
+                    const response = await fetch('Temple bell.mp3');
+                    const arrayBuffer = await response.arrayBuffer();
+                    bellBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+                }
+
+                // Sub-audible keep-alive oscillator prevents Windows & Android from putting audio hardware to sleep
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                gain.gain.value = 0.00001;
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start();
+            } catch (err) {
+                console.warn('Web Audio API fallback to HTML5 Audio:', err);
+            }
+
+            // Unlock fallback HTML5 audio element
+            fallbackAudio.volume = 0.01;
+            fallbackAudio.play().then(() => {
+                fallbackAudio.pause();
+                fallbackAudio.currentTime = 0;
+                fallbackAudio.volume = 1.0;
+            }).catch(() => {});
+        }
+
+        function playBellSoundImmediately() {
+            if (audioCtx && bellBuffer) {
+                if (audioCtx.state === 'suspended') {
+                    audioCtx.resume();
+                }
+                const source = audioCtx.createBufferSource();
+                source.buffer = bellBuffer;
+                source.connect(audioCtx.destination);
+                source.start(0);
+            } else {
+                fallbackAudio.currentTime = 0;
+                fallbackAudio.play().catch(err => console.warn('Audio playback prevented:', err));
+            }
+        }
+
+        // Keep device awake on Android & Windows when possible
+        let wakeLock = null;
+        async function requestWakeLock() {
+            if ('wakeLock' in navigator) {
+                try {
+                    wakeLock = await navigator.wakeLock.request('screen');
+                } catch (e) {}
+            }
+        }
+
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') {
+                requestWakeLock();
+                if (audioCtx && audioCtx.state === 'suspended') {
+                    audioCtx.resume();
+                }
+            }
+        });
+
+        // ==========================================
+        // UNTHROTTLED BACKGROUND WEB WORKER TIMER
+        // ==========================================
+        let timerWorker = null;
+
+        function startUnthrottledClock() {
+            updateTimer();
+            const workerScript = `
+                setInterval(() => {
+                    postMessage('tick');
+                }, 250);
+            `;
+            const blob = new Blob([workerScript], { type: 'application/javascript' });
+            timerWorker = new Worker(URL.createObjectURL(blob));
+            timerWorker.onmessage = () => updateTimer();
+        }
+
+        // ==========================================
+        // LAUNCH LOGIC & PERMISSIONS
         // ==========================================
         const launchOverlay = document.getElementById('launch-overlay');
         const timerScreen = document.getElementById('timer-screen');
         const gotItBtn = document.getElementById('got-it-btn');
-        const audio = document.getElementById('notify-sound');
 
-        gotItBtn.addEventListener('click', () => {
-            // 1. Hide Overlay
+        gotItBtn.addEventListener('click', async () => {
             launchOverlay.style.opacity = '0';
             launchOverlay.style.visibility = 'hidden';
-            
-            // 2. Show Timer
             timerScreen.classList.add('active');
 
-            // 3. Unlock Audio Engine (Required by browsers)
-            audio.play().then(() => {
-                audio.pause();
-                audio.currentTime = 0;
-            }).catch(e => console.log("Audio unlock failed silently."));
+            await initAudioEngine();
+            requestWakeLock();
 
-            // 4. Request Notification Permission
-            if ("Notification" in window && Notification.permission !== "granted" && Notification.permission !== "denied") {
+            if ('Notification' in window && Notification.permission !== 'granted' && Notification.permission !== 'denied') {
                 Notification.requestPermission();
             }
 
-            // Start Timer Loop
-            updateTimer();
-            setInterval(updateTimer, 1000);
+            startUnthrottledClock();
         });
 
         // ==========================================
-        // SYSTEM: TIME SYNC ENGINE
+        // TIME SYNC & NOTIFICATION ENGINE
         // ==========================================
         let currentPhaseIsWork = null;
 
@@ -249,18 +366,16 @@
 
             // 0-24 & 30-54 = WORK | 25-29 & 55-59 = BREAK
             const isWorkPhase = (m < 25) || (m >= 30 && m < 55);
-            
-            // Trigger Notifications on Phase Change
+
             if (currentPhaseIsWork !== null && currentPhaseIsWork !== isWorkPhase) {
                 triggerNotification(isWorkPhase);
             }
             currentPhaseIsWork = isWorkPhase;
 
-            let targetMinute;
+            let targetMinute = 60;
             if (m < 25) targetMinute = 25;
             else if (m < 30) targetMinute = 30;
             else if (m < 55) targetMinute = 55;
-            else targetMinute = 60;
 
             let remMin = targetMinute - 1 - m;
             let remSec = 60 - s;
@@ -269,69 +384,78 @@
                 remSec = 0;
             }
 
-            // Update Text UI
-            const phaseEl = document.getElementById('phase-text');
-            phaseEl.innerText = isWorkPhase ? "WORK" : "BREAK";
+            document.getElementById('phase-text').innerText = isWorkPhase ? 'WORK' : 'BREAK';
+            document.getElementById('time-text').innerText =
+                String(remMin).padStart(2, '0') + ':' + String(remSec).padStart(2, '0');
 
-            document.getElementById('time-text').innerText = 
-                String(remMin).padStart(2, '0') + ":" + String(remSec).padStart(2, '0');
-
-            // Calculate Progress Bar
-            const totalPhaseSeconds = isWorkPhase ? (25 * 60) : (5 * 60);
+            const totalPhaseSeconds = isWorkPhase ? 1500 : 300;
             const remainingTotalSeconds = (remMin * 60) + remSec;
             const elapsedSeconds = totalPhaseSeconds - remainingTotalSeconds;
             const progressPct = (elapsedSeconds / totalPhaseSeconds) * 100;
 
-            const fillEl = document.getElementById('progress-fill');
-            fillEl.style.width = progressPct + "%";
+            document.getElementById('progress-fill').style.width = progressPct + '%';
         }
 
         function triggerNotification(isWorkPhase) {
-            // Play Audio
-            audio.currentTime = 0;
-            audio.play().catch(e => console.log("Audio play blocked by browser.", e));
+            // 1. Play zero-latency bell sound immediately
+            playBellSoundImmediately();
 
-            // Show Notification Popup
-            if ("Notification" in window && Notification.permission === "granted") {
-                const title = "POMOFLOW";
-                const body = isWorkPhase ? "Break done! Focus time." : "Work done! Time to recharge.";
-                
-                // Using Service Worker to show notification if available (better PWA support)
-                navigator.serviceWorker.ready.then(registration => {
-                    registration.showNotification(title, {
-                        body: body,
-                        icon: './icon-192.png',
-                        vibrate: [200, 100, 200]
+            // 2. Vibrate mobile hardware directly if supported
+            if ('vibrate' in navigator) {
+                navigator.vibrate([300, 100, 300, 100, 400]);
+            }
+
+            // 3. Fire system notification with sound & vibration
+            if ('Notification' in window && Notification.permission === 'granted') {
+                const title = 'FLOW';
+                const body = isWorkPhase ? 'Break done! Focus time.' : 'Work done! Time to recharge.';
+
+                if ('serviceWorker' in navigator) {
+                    navigator.serviceWorker.ready.then(registration => {
+                        if (registration.active) {
+                            registration.active.postMessage({
+                                type: 'PHASE_NOTIFICATION',
+                                body: body
+                            });
+                        } else {
+                            registration.showNotification(title, {
+                                body: body,
+                                icon: './icon-192.png',
+                                badge: './icon-192.png',
+                                tag: 'flow-phase-alert',
+                                renotify: true,
+                                silent: false,
+                                requireInteraction: true,
+                                vibrate: [300, 100, 300, 100, 400]
+                            });
+                        }
+                    }).catch(() => {
+                        new Notification(title, { body: body, icon: './icon-192.png', silent: false });
                     });
-                }).catch(() => {
-                    // Fallback to standard web notification
-                    new Notification(title, { body: body, icon: './icon-192.png' });
-                });
+                } else {
+                    new Notification(title, { body: body, icon: './icon-192.png', silent: false });
+                }
             }
         }
 
         // ==========================================
-        // SYSTEM: 3D STARFIELD ENGINE
+        // 3D STARFIELD ENGINE
         // ==========================================
         const canvas = document.getElementById('space-canvas');
         const ctx = canvas.getContext('2d');
-        
         let width, height;
-        let stars = [];
-        const numStars = 400; 
-        let mouseX = 0;
-        let mouseY = 0;
+        const stars = [];
+        const STAR_COUNT = 400;
+        let mouseX = 0, mouseY = 0;
 
         function resizeCanvas() {
             width = canvas.width = window.innerWidth;
             height = canvas.height = window.innerHeight;
         }
-
         window.addEventListener('resize', resizeCanvas);
         resizeCanvas();
 
-        // Parallax Listener
-        document.addEventListener('mousemove', (e) => {
+        document.addEventListener('mousemove', e => {
             mouseX = (e.clientX - width / 2) * 0.05;
             mouseY = (e.clientY - height / 2) * 0.05;
         });
@@ -340,55 +464,49 @@
             constructor() {
                 this.x = Math.random() * width;
                 this.y = Math.random() * height;
-                this.z = Math.random() * width; 
+                this.z = Math.random() * width;
                 this.size = Math.random() * 1.5;
                 this.color = `rgba(255, 255, 255, ${Math.random() * 0.5 + 0.5})`;
             }
-
             update() {
-                this.z -= 1.5; // Speed of space movement
+                this.z -= 1.5;
                 if (this.z <= 0) {
                     this.z = width;
                     this.x = Math.random() * width;
                     this.y = Math.random() * height;
                 }
             }
-
             draw() {
-                let x, y, radius;
-                x = (this.x - width / 2) * (width / this.z) + width / 2 + mouseX * (width / this.z);
-                y = (this.y - height / 2) * (width / this.z) + height / 2 + mouseY * (width / this.z);
-                radius = this.size * (width / this.z);
+                const scale = width / this.z;
+                const sx = (this.x - width / 2) * scale + width / 2 + mouseX * scale;
+                const sy = (this.y - height / 2) * scale + height / 2 + mouseY * scale;
+                const r = this.size * scale;
 
                 ctx.beginPath();
-                ctx.arc(x, y, radius, 0, Math.PI * 2);
+                ctx.arc(sx, sy, r, 0, Math.PI * 2);
                 ctx.fillStyle = this.color;
                 ctx.fill();
             }
         }
 
-        for (let i = 0; i < numStars; i++) {
+        for (let i = 0; i < STAR_COUNT; i++) {
             stars.push(new Star());
         }
 
         function animateSpace() {
-            // Pure black with opacity for clean star trails without grey/white background haze
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.3)'; 
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
             ctx.fillRect(0, 0, width, height);
-
-            stars.forEach(star => {
-                star.update();
-                star.draw();
-            });
-
+            for (let i = 0; i < stars.length; i++) {
+                stars[i].update();
+                stars[i].draw();
+            }
             requestAnimationFrame(animateSpace);
         }
-
         animateSpace();
-    </script>
 
-    <!-- PWA Service Worker Registration -->
-    <script>
+        // ==========================================
+        // PWA SERVICE WORKER REGISTRATION
+        // ==========================================
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('./sw.js');
